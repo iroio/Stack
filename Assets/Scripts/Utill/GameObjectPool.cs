@@ -28,7 +28,7 @@ public class GameObjectPool<T> where T : Component
         return _createFunction();
     }
 
-    public void set(T obj)
+    public void Set(T obj)
     {
         _pool.Enqueue(obj);
     }
