@@ -1,5 +1,3 @@
-using Unity.Mathematics;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -8,25 +6,33 @@ public class CubeMovement : MonoBehaviour
     CubeSpawnManager _manager;
     Rigidbody _rb;
 
-    Vector3 _dir;
+    Transform _start;
+    Transform _end;
 
-    Vector3 _start;
-    Vector3 _end;
+    float _speed;
+    float _time;
 
     bool _isMoving;
     bool _isFalling;
+    bool _isX;
 
     public void InitCube(CubeSpawnManager manager)
     {
         _manager = manager;
     }
 
-    public void CubeMove(Vector3 dir)
+    public void CubeMove(Transform start, Transform end, float speed)
     {
-        _dir = dir.normalized;
+        _start = start;
+        _end = end;
+        _speed = speed;
 
         _isMoving = true;
         _isFalling = false;
+
+        _isX = Mathf.Abs(start.position.x - end.position.x) > 0;
+
+        _time = 0f;
 
         if (_rb != null)
             _rb.isKinematic = true;
@@ -34,13 +40,19 @@ public class CubeMovement : MonoBehaviour
 
     public void CubeFall()
     {
-        _isMoving = true;
+        _isMoving = false;
         _isFalling = true;
+
+        _start = null;
+        _end = null;
 
         if (_rb == null)
             _rb = gameObject.AddComponent<Rigidbody>();
 
         _rb.isKinematic = false;
+
+        _rb.linearVelocity = Vector3.zero;
+        _rb.angularVelocity = Vector3.zero;
 
         _rb.AddForce(Vector3.down * 2f, ForceMode.Impulse);
     }
@@ -52,7 +64,6 @@ public class CubeMovement : MonoBehaviour
 
     public void ResetCube()
     {
-        _dir = Vector3.zero;
         _isMoving = false;
         _isFalling = false;
 
@@ -70,30 +81,33 @@ public class CubeMovement : MonoBehaviour
     {
         if (_manager == null) return;
 
-        if(_isFalling)
+        if (_isFalling)
         {
             _manager.RemoveCube(this);
         }
-    }
-
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (_isMoving)
-        {
-            float speed = _manager._CurrentSpeed;
-            transform.position += _dir * speed * Time.deltaTime;
-        }
+        // 방어 코드
+        if(!_isMoving) return;
+        if (_isFalling) return;
+        if (_start == null || _end == null) return;
 
-        if (_isFalling && transform.position.y < -10f)
-        {
-            _manager.RemoveCube(this);
-        }
+        _time += Time.deltaTime;
+
+        float distance = Vector3.Distance(_start.position, _end.position);
+
+        float t = Mathf.PingPong(_time * _speed / distance, 1f);
+
+        Vector3 pos = transform.position;
+
+        if(_isX)
+            pos.x = Mathf.Lerp(_start.position.x, _end.position.x, t);
+        else
+            pos.z = Mathf.Lerp(_start.position.z, _end.position.z, t);
+
+        transform.position = pos;
     }
 }

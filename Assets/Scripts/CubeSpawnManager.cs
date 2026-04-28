@@ -1,233 +1,232 @@
-using Unity.Mathematics;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class CubeSpawnManager : MonoBehaviour
 {
-    CubeMovement _currentCube;
+    GameManager _gameManager;
+    CubeMovement _currentCube;  // 현재 움직이는 큐브
+    CubeMovement _lastCube; // 마지막 큐브
 
-    // 카메라 타겟
-    [SerializeField] Transform _target;
+    // 설정 ###########################################################
+    [SerializeField] Transform _cameraTarget;   // 카메라가 따라갈 타켓
     [SerializeField] GameObject _cubePrefab;
-    [SerializeField] GameObject _baseCube;
-
-    [SerializeField] float _speedIncrease = 0.2f;
-    [SerializeField] float _maxSpeed = 12f;
-
-    [SerializeField] float _speed = 7f;
-    [SerializeField] float _overlapOffset = 0.05f;
+    [SerializeField] GameObject _previousCube;
 
     [SerializeField] Transform[] _spawnPoint;
 
-    Transform _start;
-    Transform _end;
+    // 속도 ###########################################################
+    [SerializeField] float _speedIncrease = 0.2f;
+    [SerializeField] float _maxSpeed = 12f;
+    [SerializeField] float _moveSpeed = 5f;
+    [SerializeField] float _minSpeed = 5f;
 
-    GameObjectPool<CubeMovement> _cubePools;
+    [SerializeField] float _perfectThresholdRatio = 0.05f;  // 퍼펙트 판정 허용 비율
 
-    Vector3 _dir;
-    Vector3 _pos;
+    // 판정 값 #########################################################
+    float _offset;             // 기준 큐브와 현재 큐브의 거리
+    float _absOffset;        // 거리 절댓값
+    float _overlapSize;     // 겹친 길이
 
-    Vector3 _basePos;
-    Vector3 _newPos;
+    // 상태 값 #########################################################
+    bool _lastAxisIsX;
+    bool _nextAxisIsX = true;
 
-    Vector3 _curScale;
-    Vector3 _curCubePos;
-
-    Vector3 _spawnPos;
-
-    Vector3 _cutScale;
-    Vector3 _cutPos;
-
-    // 카메라 타겟 높이 조절
-    float _targetY;
+    float _targetY;     // 카메라 목표 Y 위치
     float _cubeHeight;
 
-    float _offset;
-    float _absOffset;
+    // 풀링 ###########################################################
+    GameObjectPool<CubeMovement> _cubePools;
 
-    float _baseSize;
-    float _overlapSize;
+    //  #############################################################
 
-    float _center;
-    float _perfactOffset;
+    public float _CurrentSpeed => _moveSpeed;
 
-    float _cutSize;
-
-    //int _stackPoint = 0;
-
-    bool _tempX;
-    bool _isX = true;
-
-    public float _CurrentSpeed => _speed;
-
+    // 큐브 생성 ########################################################
     public void SpawnCube()
     {
-        // ObjectPool 에서 큐브 하나 꺼내옴
         var cube = _cubePools.Get();
         cube.gameObject.SetActive(true);
 
-        // 기준 위치 지정
-        _basePos = _baseCube.transform.position;
+        Vector3 basePos = _previousCube.transform.position;
 
-        if (_isX)
+        // 이돟 범위 : 큐브 반복 이동용
+        Transform startPoint;
+        Transform endPoint;
+
+        Vector3 spawnPos;
+        Vector3 moveDir;
+
+        if (_nextAxisIsX)
         {
-            _start = _spawnPoint[0];
-            _end = _spawnPoint[1];
+            startPoint = _spawnPoint[0];
+            endPoint = _spawnPoint[1];
 
-            // X축 스폰위치 지정
-            _spawnPos = new Vector3(_spawnPoint[0].position.x, _basePos.y + _cubeHeight, _basePos.z);
+            spawnPos = new Vector3(_spawnPoint[0].position.x, basePos.y + _cubeHeight, basePos.z);
+            moveDir = Vector3.left;
         }
         else
         {
-            _start = _spawnPoint[2];
-            _end = _spawnPoint[3];
+            startPoint = _spawnPoint[2];
+            endPoint = _spawnPoint[3];
 
-            // Z축 스폰위치 지정
-            _spawnPos = new Vector3(_basePos.x, _basePos.y + _cubeHeight, _spawnPoint[2].position.z);
+            spawnPos = new Vector3(basePos.x, basePos.y + _cubeHeight, _spawnPoint[2].position.z);
+            moveDir = Vector3.back;
         }
 
         // 큐브의 위치와 크기 지정
-        cube.transform.position = _spawnPos;
-        cube.transform.localScale = _baseCube.transform.localScale;
+        cube.transform.position = spawnPos;
+        cube.transform.localScale = _previousCube.transform.localScale;
 
-        // 이동 방향 지정
-        _dir = _isX ? Vector3.left : Vector3.back;
-
-        // 이동 방향 저장
-        _tempX = _isX;
-        _isX = !_isX;
+        // 이동 축 저장
+        _lastAxisIsX = _nextAxisIsX;
+        _nextAxisIsX = !_nextAxisIsX;
 
         _currentCube = cube;
 
-        // 이동
-        cube.CubeMove(_dir);
+        cube.CubeMove(startPoint, endPoint, _moveSpeed);
 
         // 큐브 높이만큼 카메라 위치 변경
         _targetY += _cubeHeight;
-
-        // 속도 증가
-        _speed += _speedIncrease;
-        _speed = Mathf.Min(_speed, _maxSpeed);
     }
 
+    // 잘린 큐브 생성 #####################################################
     public void SpawnCutCube()
     {
         var cutCube = _cubePools.Get();
         cutCube.gameObject.SetActive(true);
 
-        _cutSize = _absOffset;
+        float cutSize = _absOffset; // 잘린 길이
 
-        _cutScale = _currentCube.transform.localScale;
-        _cutPos = _currentCube.transform.position;
+        Vector3 cutScale = _currentCube.transform.localScale; // 현재 큐브 크기
+        Vector3 cutPos = _currentCube.transform.position; // 현재 위치
 
-        float dir = Mathf.Sign(_offset);
+        float direction = (_offset == 0) ? 1f : Mathf.Sign(_offset); // 밀린 방향
 
-        if (_tempX)
-            _cutScale.x = _cutSize;
+        // 잘린 방향 축 크기 설정
+        if (_lastAxisIsX)
+            cutScale.x = cutSize;
         else
-            _cutScale.z = _cutSize;
+            cutScale.z = cutSize;
 
-        cutCube.transform.localScale = _cutScale;
+        cutCube.transform.localScale = cutScale;
 
-        if (_tempX)
-            _cutPos.x += dir * (_overlapSize / 2 + _cutSize / 2);
+        // 잘린 큐브 위치 이동
+        if (_lastAxisIsX)
+            cutPos.x += direction * (_overlapSize / 2 + cutSize / 2);
         else
-            _cutPos.z += dir * (_overlapSize / 2 + _cutSize / 2);
+            cutPos.z += direction * (_overlapSize / 2 + cutSize / 2);
 
-        cutCube.transform.position = _cutPos;
+        cutCube.transform.position = cutPos;
 
         cutCube.CubeFall();
     }
 
-    // 겹쳐진 큐브상테 체크
+    // 큐브상태 체크 ######################################################
     public void CheckStack()
     {
-        // 기준이 될 큐브
-        _basePos = _baseCube.transform.position;
-        // _tempX 가 True 일 때 X 축, False 일떄 Z축
-        _baseSize = _tempX ? _baseCube.transform.localScale.x : _baseCube.transform.localScale.z;
-        // 현재 큐브 위치
-        _newPos = _currentCube.transform.position;
+        Vector3 basePos = _previousCube.transform.position;
+        float baseSize = _lastAxisIsX ? _previousCube.transform.localScale.x : _previousCube.transform.localScale.z;
 
-        // _offset = 이전 큐브와 현재 큐브 사이의 거리
-        if (_tempX)
-            _offset = _newPos.x - _basePos.x;
+        Vector3 currentPos = _currentCube.transform.position;
+
+        if (_lastAxisIsX)
+            _offset = currentPos.x - basePos.x;
         else
-            _offset = _newPos.z - _basePos.z;
+            _offset = currentPos.z - basePos.z;
 
-        // 절대값으로 거리만
         _absOffset = Mathf.Abs(_offset);
 
-        // 겹친 부분이 없으면 Game Over
-        if (_absOffset >= _baseSize)
+        // Game Over 체크
+        if (_absOffset >= baseSize)
         {
             Debug.Log("Game Over");
             _currentCube.StopCube();
+            _currentCube.CubeFall();
+
+            _lastCube = _currentCube;
+
             return;
         }
+        else
+        {
+            _gameManager.AddScore(1);
+        }
 
-        // Perfact 보정
-        _perfactOffset = _baseSize * _overlapOffset;
-        if (_absOffset <= _perfactOffset)
+        // 퍼펙트 판정 체크
+        float perfectOffset = baseSize * _perfectThresholdRatio;
+
+        if (_absOffset <= perfectOffset)
         {
             _offset = 0;
             _absOffset = 0;
 
-            if (_tempX)
-                _newPos.x = _basePos.x;
+            if (_lastAxisIsX)
+                currentPos.x = basePos.x;
             else
-                _newPos.z = _basePos.z;
+                currentPos.z = basePos.z;
 
-            _currentCube.transform.position = _newPos;
+            _currentCube.transform.position = currentPos;
 
-            _speed -= _speedIncrease;
-            _speed = Mathf.Min(_speed, _maxSpeed);
+            // 퍼펙트시 속도 감소
+            _moveSpeed -= _speedIncrease;
+        }
+        else
+        {
+            // 속도 증가
+            _moveSpeed += _speedIncrease;
         }
 
-        // 겹친 부분 크기 계산
-        _overlapSize = Mathf.Max(0, _baseSize - _absOffset);
-        _curScale = _currentCube.transform.localScale;
+        _moveSpeed = Mathf.Clamp(_moveSpeed, _minSpeed, _maxSpeed);
 
-        // 퍼펙 이면 X
-        if (_absOffset > _perfactOffset)
+        _overlapSize = Mathf.Max(0, baseSize - _absOffset);
+
+        //  위치 보정
+        Vector3 curScale = _currentCube.transform.localScale;
+        if (_lastAxisIsX)
+            curScale.x = _overlapSize;
+        else
+            curScale.z = _overlapSize;
+
+        _currentCube.transform.localScale = curScale;
+
+        float centerOffset = _offset / 2f;
+        Vector3 _curCubePos = _currentCube.transform.position;
+
+        if (_lastAxisIsX)
+            _curCubePos.x -= centerOffset;
+        else
+            _curCubePos.z -= centerOffset;
+
+        _currentCube.transform.position = _curCubePos;
+
+        // 컷 큐브 생성
+        if (_absOffset > perfectOffset)
         {
             SpawnCutCube();
         }
 
-        // 겹친부분만큼 큐브 크기 축소
-        if (_tempX)
-            _curScale.x = _overlapSize;
-        else
-            _curScale.z = _overlapSize;
-
-        _currentCube.transform.localScale = _curScale;
-
-        // 중심위치 보정
-        _center = _offset / 2f;
-        _curCubePos = _currentCube.transform.position;
-
-        if (_tempX)
-            _curCubePos.x -= _center;
-        else
-            _curCubePos.z -= _center;
-
-        _currentCube.transform.position = _curCubePos;
-
-        _baseCube = _currentCube.gameObject;
+        _previousCube = _currentCube.gameObject;
     }
 
+    // 큐브 제거 ########################################################
     public void RemoveCube(CubeMovement cube)
     {
         cube.ResetCube();
         cube.gameObject.SetActive(false);
         _cubePools.Set(cube);
+
+        if (cube == _lastCube)
+        {
+            _gameManager.GameOver();
+        }
     }
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    // Start ##########################################################
     void Start()
     {
-        _cubePools = new GameObjectPool<CubeMovement>(5, () =>
+        _gameManager = GameManager.Instance;
+
+        _cubePools = new GameObjectPool<CubeMovement>(10, () =>
         {
             var obj = Instantiate(_cubePrefab, transform);
             obj.SetActive(false);
@@ -237,15 +236,18 @@ public class CubeSpawnManager : MonoBehaviour
         });
 
         _cubeHeight = _cubePrefab.transform.localScale.y;
-        _targetY = _target.position.y - 1;
+        _targetY = _cameraTarget.position.y - 1;
         SpawnCube();
     }
 
+    // Update #########################################################
     void Update()
     {
-        _pos = _target.position;
-        _pos.y = Mathf.Lerp(_pos.y, _targetY, Time.deltaTime * 5f);
-        _target.position = _pos;
+        Vector3 pos = _cameraTarget.position;
+        pos.y = Mathf.Lerp(pos.y, _targetY, Time.deltaTime * 5f);
+        _cameraTarget.position = pos;
+
+        if (_gameManager.IsGameOver) return;
 
         if (Mouse.current.leftButton.wasPressedThisFrame)
         {
@@ -253,7 +255,10 @@ public class CubeSpawnManager : MonoBehaviour
             {
                 _currentCube.StopCube();
                 CheckStack();
+
+                if(_lastCube != null) return;
             }
+
             SpawnCube();
         }
     }

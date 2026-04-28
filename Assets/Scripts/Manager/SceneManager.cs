@@ -8,8 +8,9 @@ public class ScenesManager : MonoBehaviour
 
     IEnumerator Load(string sceneName)
     {
-        yield return new WaitForSeconds(1f);
+        //yield return new WaitForSeconds(1f);
         SceneManager.LoadScene(sceneName);
+        yield return null;
     }
 
     public void LoadScene(string sceneName)
