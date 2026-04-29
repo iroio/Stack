@@ -1,47 +1,49 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class CubeSpawnManager : MonoBehaviour
 {
     GameManager _gameManager;
-    CubeMovement _currentCube;  // ÇöÀç ¿òÁ÷ÀÌ´Â Å¥ºê
-    CubeMovement _lastCube; // ¸¶Áö¸· Å¥ºê
+    CubeMovement _currentCube;  // í˜„ì¬ ì›€ì§ì´ëŠ” íë¸Œ
+    CubeMovement _lastCube; // ë§ˆì§€ë§‰ íë¸Œ
 
-    // ¼³Á¤ ###########################################################
-    [SerializeField] Transform _cameraTarget;   // Ä«¸Ş¶ó°¡ µû¶ó°¥ Å¸ÄÏ
+    // ì„¤ì • ############################################
+    [SerializeField] Transform _cameraTarget;   // ì¹´ë©”ë¼ê°€ ë”°ë¼ê°ˆ íƒ€ì¼“
     [SerializeField] GameObject _cubePrefab;
     [SerializeField] GameObject _previousCube;
 
     [SerializeField] Transform[] _spawnPoint;
 
-    // ¼Óµµ ###########################################################
-    [SerializeField] float _speedIncrease = 0.2f;
+    // ì†ë„ ############################################
+    [SerializeField] float _speedIncrease = 0.1f;
     [SerializeField] float _maxSpeed = 12f;
-    [SerializeField] float _moveSpeed = 5f;
-    [SerializeField] float _minSpeed = 5f;
+    [SerializeField] float _moveSpeed = 10f;
+    [SerializeField] float _minSpeed = 10f;
 
-    [SerializeField] float _perfectThresholdRatio = 0.05f;  // ÆÛÆåÆ® ÆÇÁ¤ Çã¿ë ºñÀ²
+    [SerializeField] float _perfectThresholdRatio = 0.035f;  // í¼í™íŠ¸ íŒì • í—ˆìš© ë¹„ìœ¨
 
-    // ÆÇÁ¤ °ª #########################################################
-    float _offset;             // ±âÁØ Å¥ºê¿Í ÇöÀç Å¥ºêÀÇ °Å¸®
-    float _absOffset;        // °Å¸® Àı´ñ°ª
-    float _overlapSize;     // °ãÄ£ ±æÀÌ
+    // íŒì • ê°’ ##########################################
+    float _offset;             // ê¸°ì¤€ íë¸Œì™€ í˜„ì¬ íë¸Œì˜ ê±°ë¦¬
+    float _absOffset;        // ê±°ë¦¬ ì ˆëŒ“ê°’
+    float _overlapSize;     // ê²¹ì¹œ ê¸¸ì´
 
-    // »óÅÂ °ª #########################################################
+    // ìƒíƒœ ê°’ ##########################################
     bool _lastAxisIsX;
     bool _nextAxisIsX = true;
 
-    float _targetY;     // Ä«¸Ş¶ó ¸ñÇ¥ Y À§Ä¡
+    bool _inputLocked;
+
+    float _targetY;     // ì¹´ë©”ë¼ ëª©í‘œ Y ìœ„ì¹˜
     float _cubeHeight;
 
-    // Ç®¸µ ###########################################################
+    // í’€ë§ ###########################################
     GameObjectPool<CubeMovement> _cubePools;
 
-    //  #############################################################
+    //  #############################################
 
     public float _CurrentSpeed => _moveSpeed;
 
-    // Å¥ºê »ı¼º ########################################################
+    // íë¸Œ ìƒì„± ########################################
     public void SpawnCube()
     {
         var cube = _cubePools.Get();
@@ -49,7 +51,7 @@ public class CubeSpawnManager : MonoBehaviour
 
         Vector3 basePos = _previousCube.transform.position;
 
-        // ÀÌ‰¥ ¹üÀ§ : Å¥ºê ¹İº¹ ÀÌµ¿¿ë
+        // ì´ëŸ ë²”ìœ„ : íë¸Œ ë°˜ë³µ ì´ë™ìš©
         Transform startPoint;
         Transform endPoint;
 
@@ -73,11 +75,11 @@ public class CubeSpawnManager : MonoBehaviour
             moveDir = Vector3.back;
         }
 
-        // Å¥ºêÀÇ À§Ä¡¿Í Å©±â ÁöÁ¤
+        // íë¸Œì˜ ìœ„ì¹˜ì™€ í¬ê¸° ì§€ì •
         cube.transform.position = spawnPos;
         cube.transform.localScale = _previousCube.transform.localScale;
 
-        // ÀÌµ¿ Ãà ÀúÀå
+        // ì´ë™ ì¶• ì €ì¥
         _lastAxisIsX = _nextAxisIsX;
         _nextAxisIsX = !_nextAxisIsX;
 
@@ -85,24 +87,24 @@ public class CubeSpawnManager : MonoBehaviour
 
         cube.CubeMove(startPoint, endPoint, _moveSpeed);
 
-        // Å¥ºê ³ôÀÌ¸¸Å­ Ä«¸Ş¶ó À§Ä¡ º¯°æ
+        // íë¸Œ ë†’ì´ë§Œí¼ ì¹´ë©”ë¼ ìœ„ì¹˜ ë³€ê²½
         _targetY += _cubeHeight;
     }
 
-    // Àß¸° Å¥ºê »ı¼º #####################################################
+    // ì˜ë¦° íë¸Œ ìƒì„± #####################################
     public void SpawnCutCube()
     {
         var cutCube = _cubePools.Get();
         cutCube.gameObject.SetActive(true);
 
-        float cutSize = _absOffset; // Àß¸° ±æÀÌ
+        float cutSize = _absOffset; // ì˜ë¦° ê¸¸ì´
 
-        Vector3 cutScale = _currentCube.transform.localScale; // ÇöÀç Å¥ºê Å©±â
-        Vector3 cutPos = _currentCube.transform.position; // ÇöÀç À§Ä¡
+        Vector3 cutScale = _currentCube.transform.localScale; // í˜„ì¬ íë¸Œ í¬ê¸°
+        Vector3 cutPos = _currentCube.transform.position; // í˜„ì¬ ìœ„ì¹˜
 
-        float direction = (_offset == 0) ? 1f : Mathf.Sign(_offset); // ¹Ğ¸° ¹æÇâ
+        float direction = (_offset == 0) ? 1f : Mathf.Sign(_offset); // ë°€ë¦° ë°©í–¥
 
-        // Àß¸° ¹æÇâ Ãà Å©±â ¼³Á¤
+        // ì˜ë¦° ë°©í–¥ ì¶• í¬ê¸° ì„¤ì •
         if (_lastAxisIsX)
             cutScale.x = cutSize;
         else
@@ -110,7 +112,7 @@ public class CubeSpawnManager : MonoBehaviour
 
         cutCube.transform.localScale = cutScale;
 
-        // Àß¸° Å¥ºê À§Ä¡ ÀÌµ¿
+        // ì˜ë¦° íë¸Œ ìœ„ì¹˜ ì´ë™
         if (_lastAxisIsX)
             cutPos.x += direction * (_overlapSize / 2 + cutSize / 2);
         else
@@ -121,7 +123,7 @@ public class CubeSpawnManager : MonoBehaviour
         cutCube.CubeFall();
     }
 
-    // Å¥ºê»óÅÂ Ã¼Å© ######################################################
+    // íë¸Œìƒíƒœ ì²´í¬ #####################################
     public void CheckStack()
     {
         Vector3 basePos = _previousCube.transform.position;
@@ -136,12 +138,15 @@ public class CubeSpawnManager : MonoBehaviour
 
         _absOffset = Mathf.Abs(_offset);
 
-        // Game Over Ã¼Å©
+        // Game Over ì²´í¬
         if (_absOffset >= baseSize)
         {
-            Debug.Log("Game Over");
+            if (_gameManager.IsGameOver) return;
+
             _currentCube.StopCube();
             _currentCube.CubeFall();
+
+            _gameManager.GameOver();
 
             _lastCube = _currentCube;
 
@@ -152,7 +157,7 @@ public class CubeSpawnManager : MonoBehaviour
             _gameManager.AddScore(1);
         }
 
-        // ÆÛÆåÆ® ÆÇÁ¤ Ã¼Å©
+        // í¼í™íŠ¸ íŒì • ì²´í¬
         float perfectOffset = baseSize * _perfectThresholdRatio;
 
         if (_absOffset <= perfectOffset)
@@ -167,12 +172,12 @@ public class CubeSpawnManager : MonoBehaviour
 
             _currentCube.transform.position = currentPos;
 
-            // ÆÛÆåÆ®½Ã ¼Óµµ °¨¼Ò
+            // í¼í™íŠ¸ì‹œ ì†ë„ ê°ì†Œ
             _moveSpeed -= _speedIncrease;
         }
         else
         {
-            // ¼Óµµ Áõ°¡
+            // ì†ë„ ì¦ê°€
             _moveSpeed += _speedIncrease;
         }
 
@@ -180,7 +185,7 @@ public class CubeSpawnManager : MonoBehaviour
 
         _overlapSize = Mathf.Max(0, baseSize - _absOffset);
 
-        //  À§Ä¡ º¸Á¤
+        //  ìœ„ì¹˜ ë³´ì •
         Vector3 curScale = _currentCube.transform.localScale;
         if (_lastAxisIsX)
             curScale.x = _overlapSize;
@@ -199,7 +204,7 @@ public class CubeSpawnManager : MonoBehaviour
 
         _currentCube.transform.position = _curCubePos;
 
-        // ÄÆ Å¥ºê »ı¼º
+        // ì»· íë¸Œ ìƒì„±
         if (_absOffset > perfectOffset)
         {
             SpawnCutCube();
@@ -208,23 +213,19 @@ public class CubeSpawnManager : MonoBehaviour
         _previousCube = _currentCube.gameObject;
     }
 
-    // Å¥ºê Á¦°Å ########################################################
+    // íë¸Œ ì œê±° ########################################
     public void RemoveCube(CubeMovement cube)
     {
         cube.ResetCube();
         cube.gameObject.SetActive(false);
         _cubePools.Set(cube);
-
-        if (cube == _lastCube)
-        {
-            _gameManager.GameOver();
-        }
     }
 
-    // Start ##########################################################
+    // Start ##########################################
     void Start()
     {
-        _gameManager = GameManager.Instance;
+        _gameManager = GameManager._GM;
+        _lastCube = null;
 
         _cubePools = new GameObjectPool<CubeMovement>(10, () =>
         {
@@ -237,29 +238,39 @@ public class CubeSpawnManager : MonoBehaviour
 
         _cubeHeight = _cubePrefab.transform.localScale.y;
         _targetY = _cameraTarget.position.y - 1;
+
         SpawnCube();
     }
 
-    // Update #########################################################
+    // Update #########################################
     void Update()
     {
+        if (_gameManager.IsGameOver) return;
+
         Vector3 pos = _cameraTarget.position;
         pos.y = Mathf.Lerp(pos.y, _targetY, Time.deltaTime * 5f);
         _cameraTarget.position = pos;
 
-        if (_gameManager.IsGameOver) return;
-
         if (Mouse.current.leftButton.wasPressedThisFrame)
         {
+
+            if (_inputLocked) return;
+                _inputLocked = true;
+
             if (_currentCube != null)
             {
                 _currentCube.StopCube();
                 CheckStack();
 
-                if(_lastCube != null) return;
+                if(_lastCube != null)
+                {
+                    _inputLocked = false;
+                    return;
+                }
             }
-
             SpawnCube();
+
+            _inputLocked = false;
         }
     }
 }

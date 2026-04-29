@@ -8,9 +8,48 @@ public class ScenesManager : MonoBehaviour
 
     IEnumerator Load(string sceneName)
     {
-        //yield return new WaitForSeconds(1f);
-        SceneManager.LoadScene(sceneName);
+        AsyncOperation op = SceneManager.LoadSceneAsync(sceneName);
+
+        op.allowSceneActivation = false;
+
+        while (op.progress < 0.9f)
+        {
+            Debug.Log("Loading");
+            yield return null;
+        }
+
+        Debug.Log("Waiting to Finish Loading");
+
+        op.allowSceneActivation = true;
+
+        while (!op.isDone)
+        {
+            yield return null;
+        }
+
+        Debug.Log("Done");
+
         yield return null;
+
+        if(sceneName == "Game")
+        {
+            GameManager._GM.StartGame();
+        }
+        
+        if(sceneName == "Title")
+        {
+            BaseCubeEF cube = GameObject.Find("BaseCube")?.GetComponent<BaseCubeEF>();
+
+            if (cube != null)
+            {
+                Debug.Log("CubeUp 실행");
+                cube.CubeUp();
+            }
+            else
+            {
+                Debug.Log("BaseCube 못찾음");
+            }
+        }
     }
 
     public void LoadScene(string sceneName)

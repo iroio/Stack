@@ -2,10 +2,10 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-    //UIManager _uiManager;
-    public static GameManager Instance;
+    public static GameManager _GM;
 
     int _score = 0;
+    int _highScore;
 
     bool _isGameOver;
     bool _isPlaying;
@@ -17,35 +17,55 @@ public class GameManager : MonoBehaviour
     {
         _score += score;
 
-        if(UIManager.Instance != null)
-            UIManager.Instance.ChangeScore(_score);
+        if(UIManager._UM != null)
+            UIManager._UM.ChangeScore(_score);
     }
 
     public void StartGame()
     {
         _isPlaying = true;
-
-        FindObjectOfType<CubeSpawnManager>().SpawnCube();
+        _isGameOver = false;
+        _score = 0;
     }
 
     public void GameOver()
     {
+        Debug.Log("Game Over");
+
         _isGameOver = true;
 
+        // 최고기록
+        if(_score > _highScore)
+        {
+            _highScore = _score;
+            PlayerPrefs.SetInt("HighScore", _highScore);
+            PlayerPrefs.Save();
+        }
 
-        // 게임오버 UI 보여주기
+        // Result 텍스트 출력
+        if(UIManager._UM != null)
+            UIManager._UM.GameOverResult(_score, _highScore);
+    }
+
+    public void ResetGame()
+    {
+        _isGameOver = false;
+        _isPlaying = false;
+        _score = 0;
     }
 
     private void Awake()
     {
-        if (Instance == null)
+        if (_GM == null)
         {
-            Instance = this;
+            _GM = this;
             DontDestroyOnLoad(gameObject);
         }
         else
         {
             Destroy(gameObject);
         }
+
+        _highScore = PlayerPrefs.GetInt("HighScore", 0);
     }
 }
