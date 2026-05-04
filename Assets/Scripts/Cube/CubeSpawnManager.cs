@@ -11,6 +11,7 @@ public class CubeSpawnManager : MonoBehaviour
     [SerializeField] Transform _cameraTarget;   // 카메라가 따라갈 타켓
     [SerializeField] GameObject _cubePrefab;
     [SerializeField] GameObject _previousCube;
+    [SerializeField] Transform _parentTransform;
 
     [SerializeField] Transform[] _spawnPoint;
 
@@ -47,6 +48,7 @@ public class CubeSpawnManager : MonoBehaviour
     public void SpawnCube()
     {
         var cube = _cubePools.Get();
+        cube.transform.SetParent(_parentTransform);
         cube.gameObject.SetActive(true);
 
         Vector3 basePos = _previousCube.transform.position;
@@ -245,7 +247,7 @@ public class CubeSpawnManager : MonoBehaviour
     // Update #########################################
     void Update()
     {
-        if (_gameManager.IsGameOver) return;
+        if (_gameManager.IsGameOver) return;     
 
         Vector3 pos = _cameraTarget.position;
         pos.y = Mathf.Lerp(pos.y, _targetY, Time.deltaTime * 5f);

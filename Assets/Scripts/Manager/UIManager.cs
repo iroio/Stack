@@ -38,10 +38,10 @@ public class UIManager : MonoBehaviour
         _isGameOver = true;
     }
 
-    public void TitleAnim()
+    public void LoadTitle()
     {
-        if (_BC != null)
-            _BC.CubeUp();
+        GameManager._GM.ResetGame();
+        ScenesManager.Instance.LoadScene("Title");
     }
 
     public void Awake()
@@ -57,14 +57,20 @@ public class UIManager : MonoBehaviour
 
     void Update()
     {
-        if (_isLoading) return;
-
         if (_isGameOver)
         {
+            if (_isLoading) return;
+
             if (Mouse.current.leftButton.wasPressedThisFrame)
             {
-                GameManager._GM.ResetGame();
-                ScenesManager.Instance.LoadScene("Title");
+                _isLoading = true;
+
+                if (_BC == null)
+                    _BC = GameObject.Find("BaseCube")?.GetComponent<BaseCubeEF>();
+
+                _BC.CubeDown();
+
+                Invoke(nameof(LoadTitle), 1.2f);
             }
             return;
         }

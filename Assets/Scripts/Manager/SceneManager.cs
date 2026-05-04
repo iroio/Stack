@@ -42,7 +42,6 @@ public class ScenesManager : MonoBehaviour
 
             if (cube != null)
             {
-                Debug.Log("CubeUp ½ÇÇà");
                 cube.CubeUp();
             }
             else

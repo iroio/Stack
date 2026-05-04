@@ -3,48 +3,53 @@ using UnityEngine.InputSystem;
 
 public class CubeMovement : MonoBehaviour
 {
-    CubeSpawnManager _manager;
+    CubeSpawnManager _spawnManager;
     Rigidbody _rb;
 
-    Transform _start;
-    Transform _end;
+    // 이동 ###############################################
+    Transform _startPoint;
+    Transform _endPoint;
 
-    float _speed;
-    float _time;
+    float _moveSpeed;
+    float _moveTime;
 
+    // 상태 ###############################################
     bool _isMoving;
     bool _isFalling;
-    bool _isX;
+    bool _isMoveOnX;
 
+    // 큐브 초기화 ###########################################
     public void InitCube(CubeSpawnManager manager)
     {
-        _manager = manager;
+        _spawnManager = manager;
     }
 
+    // 이동 시작 ############################################
     public void CubeMove(Transform start, Transform end, float speed)
     {
-        _start = start;
-        _end = end;
-        _speed = speed;
+        _startPoint = start;
+        _endPoint = end;
+        _moveSpeed = speed;
 
         _isMoving = true;
         _isFalling = false;
 
-        _isX = Mathf.Abs(start.position.x - end.position.x) > 0;
+        _isMoveOnX = Mathf.Abs(start.position.x - end.position.x) > 0;
 
-        _time = 0f;
+        _moveTime = 0f;
 
         if (_rb != null)
             _rb.isKinematic = true;
     }
 
+    // 큐브 낙하 ############################################
     public void CubeFall()
     {
         _isMoving = false;
         _isFalling = true;
 
-        _start = null;
-        _end = null;
+        _startPoint = null;
+        _endPoint = null;
 
         if (_rb == null)
             _rb = gameObject.AddComponent<Rigidbody>();
@@ -57,11 +62,13 @@ public class CubeMovement : MonoBehaviour
         _rb.AddForce(Vector3.down * 2f, ForceMode.Impulse);
     }
 
+    // 큐브 정지 ############################################
     public void StopCube()
     {
         _isMoving = false;
     }
 
+    // 큐브 초기화 ###########################################
     public void ResetCube()
     {
         _isMoving = false;
@@ -77,13 +84,14 @@ public class CubeMovement : MonoBehaviour
         }
     }
 
+    // 화면 밖 처리 ##########################################
     public void OnBecameInvisible()
     {
-        if (_manager == null) return;
+        if (_spawnManager == null) return;
 
         if (_isFalling)
         {
-            _manager.RemoveCube(this);
+            _spawnManager.RemoveCube(this);
         }
     }
 
@@ -93,20 +101,20 @@ public class CubeMovement : MonoBehaviour
         // 방어 코드
         if(!_isMoving) return;
         if (_isFalling) return;
-        if (_start == null || _end == null) return;
+        if (_startPoint == null || _endPoint == null) return;
 
-        _time += Time.deltaTime;
+        _moveTime += Time.deltaTime;
 
-        float distance = Vector3.Distance(_start.position, _end.position);
+        float distance = Vector3.Distance(_startPoint.position, _endPoint.position);
 
-        float t = Mathf.PingPong(_time * _speed / distance, 1f);
+        float t = Mathf.PingPong(_moveTime * _moveSpeed / distance, 1f);
 
         Vector3 pos = transform.position;
 
-        if(_isX)
-            pos.x = Mathf.Lerp(_start.position.x, _end.position.x, t);
+        if(_isMoveOnX)
+            pos.x = Mathf.Lerp(_startPoint.position.x, _endPoint.position.x, t);
         else
-            pos.z = Mathf.Lerp(_start.position.z, _end.position.z, t);
+            pos.z = Mathf.Lerp(_startPoint.position.z, _endPoint.position.z, t);
 
         transform.position = pos;
     }
