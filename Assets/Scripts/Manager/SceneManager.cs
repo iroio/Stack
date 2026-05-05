@@ -31,7 +31,7 @@ public class ScenesManager : MonoBehaviour
 
         yield return null;
 
-        if(sceneName == "Game")
+        if (sceneName == "Game")
         {
             GameManager._GM.StartGame();
         }
@@ -42,7 +42,7 @@ public class ScenesManager : MonoBehaviour
 
             if (cube != null)
             {
-                cube.CubeUp();
+                //cube.CubeUp();
             }
             else
             {

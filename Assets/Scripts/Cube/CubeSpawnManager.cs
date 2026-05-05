@@ -6,9 +6,14 @@ public class CubeSpawnManager : MonoBehaviour
     GameManager _gameManager;
     CubeMovement _currentCube;  // 현재 움직이는 큐브
     CubeMovement _lastCube; // 마지막 큐브
+    MaterialPropertyBlock _mpb; // 머터리얼 공유
+
+    [SerializeField] ColorManager _colorManager;
+    [SerializeField] BGColorSelector _colorSelector;
 
     // 설정 ############################################
     [SerializeField] Transform _cameraTarget;   // 카메라가 따라갈 타켓
+    [SerializeField] Transform _BG;                  // 배경
     [SerializeField] GameObject _cubePrefab;
     [SerializeField] GameObject _previousCube;
     [SerializeField] Transform _parentTransform;
@@ -35,6 +40,7 @@ public class CubeSpawnManager : MonoBehaviour
     bool _inputLocked;
 
     float _targetY;     // 카메라 목표 Y 위치
+    float _BGY;         // 배경 목표 Y 위치
     float _cubeHeight;
 
     // 풀링 ###########################################
@@ -89,14 +95,26 @@ public class CubeSpawnManager : MonoBehaviour
 
         cube.CubeMove(startPoint, endPoint, _moveSpeed);
 
+        // 색상 변경
+        Color color = _colorManager.GetNextColor();
+        ApplyColor(_currentCube, color);
+        _colorSelector.ApplyColor(color);
+
         // 큐브 높이만큼 카메라 위치 변경
         _targetY += _cubeHeight;
+        _BGY += _cubeHeight;
     }
 
     // 잘린 큐브 생성 #####################################
     public void SpawnCutCube()
     {
         var cutCube = _cubePools.Get();
+
+        // 잘린 큐브 색상 변경
+        Renderer r = cutCube.GetComponent<Renderer>();
+        _currentCube.GetComponent<Renderer>().GetPropertyBlock(_mpb);
+        r.SetPropertyBlock(_mpb);
+
         cutCube.gameObject.SetActive(true);
 
         float cutSize = _absOffset; // 잘린 길이
@@ -223,10 +241,20 @@ public class CubeSpawnManager : MonoBehaviour
         _cubePools.Set(cube);
     }
 
+    public void ApplyColor(CubeMovement cube, Color color)
+    {
+        Renderer r = cube.GetComponent<Renderer>();
+
+        r.GetPropertyBlock(_mpb);
+        _mpb.SetColor("_BaseColor", color);
+        r.SetPropertyBlock(_mpb);
+    }
+
     // Start ##########################################
     void Start()
     {
         _gameManager = GameManager._GM;
+        _mpb = new MaterialPropertyBlock();
         _lastCube = null;
 
         _cubePools = new GameObjectPool<CubeMovement>(10, () =>
@@ -240,6 +268,7 @@ public class CubeSpawnManager : MonoBehaviour
 
         _cubeHeight = _cubePrefab.transform.localScale.y;
         _targetY = _cameraTarget.position.y - 1;
+        _BGY = _BG.position.y;
 
         SpawnCube();
     }
@@ -253,9 +282,12 @@ public class CubeSpawnManager : MonoBehaviour
         pos.y = Mathf.Lerp(pos.y, _targetY, Time.deltaTime * 5f);
         _cameraTarget.position = pos;
 
+        Vector3 pos2 = _BG.position;
+        pos2.y = Mathf.Lerp(pos2.y, _BGY, Time.deltaTime * 5f);
+        _BG.position = pos2;
+
         if (Mouse.current.leftButton.wasPressedThisFrame)
         {
-
             if (_inputLocked) return;
                 _inputLocked = true;
 
