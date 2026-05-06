@@ -8,10 +8,20 @@ public class CubeSpawnManager : MonoBehaviour
     CubeMovement _lastCube; // 마지막 큐브
     MaterialPropertyBlock _mpb; // 머터리얼 공유
 
-    [SerializeField] ColorManager _colorManager;
-    [SerializeField] BGColorSelector _colorSelector;
+    // =========================================================
+    // 색상 관련 연결
+    // =========================================================
+    [SerializeField] CubeColorGenerator _cubeGen;
+    [SerializeField] BGColorGenerator _bgGen;
 
-    // 설정 ############################################
+    [SerializeField] CubeColorManager _cubeColorManager;
+    [SerializeField] BGColorManager _bgColorManager;
+
+    [SerializeField] Renderer _gradientCubeRenderer;
+
+    // =========================================================
+    // 설정
+    // =========================================================
     [SerializeField] Transform _cameraTarget;   // 카메라가 따라갈 타켓
     [SerializeField] Transform _BG;                  // 배경
     [SerializeField] GameObject _cubePrefab;
@@ -20,7 +30,9 @@ public class CubeSpawnManager : MonoBehaviour
 
     [SerializeField] Transform[] _spawnPoint;
 
-    // 속도 ############################################
+    // =========================================================
+    // 속도
+    // =========================================================
     [SerializeField] float _speedIncrease = 0.1f;
     [SerializeField] float _maxSpeed = 12f;
     [SerializeField] float _moveSpeed = 10f;
@@ -28,29 +40,39 @@ public class CubeSpawnManager : MonoBehaviour
 
     [SerializeField] float _perfectThresholdRatio = 0.035f;  // 퍼펙트 판정 허용 비율
 
-    // 판정 값 ##########################################
+    // =========================================================
+    // 판정 값
+    // =========================================================
     float _offset;             // 기준 큐브와 현재 큐브의 거리
     float _absOffset;        // 거리 절댓값
     float _overlapSize;     // 겹친 길이
 
-    // 상태 값 ##########################################
+    // =========================================================
+    // 상태값
+    // =========================================================
     bool _lastAxisIsX;
     bool _nextAxisIsX = true;
 
     bool _inputLocked;
 
+    bool _changeColor = false; // 색이 바뀌었는가?
+
     float _targetY;     // 카메라 목표 Y 위치
     float _BGY;         // 배경 목표 Y 위치
     float _cubeHeight;
 
-    // 풀링 ###########################################
+    // =========================================================
+    // 풀링
+    // =========================================================
     GameObjectPool<CubeMovement> _cubePools;
 
-    //  #############################################
 
+    // =========================================================
     public float _CurrentSpeed => _moveSpeed;
 
-    // 큐브 생성 ########################################
+    // =========================================================
+    // 큐브 생성
+    // =========================================================
     public void SpawnCube()
     {
         var cube = _cubePools.Get();
@@ -96,16 +118,34 @@ public class CubeSpawnManager : MonoBehaviour
         cube.CubeMove(startPoint, endPoint, _moveSpeed);
 
         // 색상 변경
-        Color color = _colorManager.GetNextColor();
-        ApplyColor(_currentCube, color);
-        _colorSelector.ApplyColor(color);
+        Color cubeColor = _cubeGen.GetNextColor();
+        Color bgColor = _bgGen.GetNextColor();
+
+        Renderer cubeRenderer = _currentCube.GetComponent<Renderer>();
+
+        _cubeColorManager.ApplyColor(cubeRenderer, cubeColor);
+        _bgColorManager.ApplyColor(bgColor);
+
+        ColorState.cubeColor = cubeColor;
+        ColorState.bgColor = bgColor;
+
+        ColorState.cubeCount = _cubeGen.GetCount();
+        ColorState.bgCount = _bgGen.GetCount();
+
+        if(!_changeColor)
+        {
+            _cubeColorManager.ApplyColor(_gradientCubeRenderer, cubeColor);
+            _changeColor = true;
+        }
 
         // 큐브 높이만큼 카메라 위치 변경
         _targetY += _cubeHeight;
         _BGY += _cubeHeight;
     }
 
-    // 잘린 큐브 생성 #####################################
+    // =========================================================
+    // 잘린 큐브 생성
+    // =========================================================
     public void SpawnCutCube()
     {
         var cutCube = _cubePools.Get();
@@ -143,7 +183,9 @@ public class CubeSpawnManager : MonoBehaviour
         cutCube.CubeFall();
     }
 
-    // 큐브상태 체크 #####################################
+    // =========================================================
+    // 큐브 상태 체크
+    // =========================================================
     public void CheckStack()
     {
         Vector3 basePos = _previousCube.transform.position;
@@ -233,7 +275,9 @@ public class CubeSpawnManager : MonoBehaviour
         _previousCube = _currentCube.gameObject;
     }
 
-    // 큐브 제거 ########################################
+    // =========================================================
+    // 큐브 제거
+    // =========================================================
     public void RemoveCube(CubeMovement cube)
     {
         cube.ResetCube();
@@ -241,6 +285,10 @@ public class CubeSpawnManager : MonoBehaviour
         _cubePools.Set(cube);
     }
 
+
+    // =========================================================
+    // 색상 적용
+    // =========================================================
     public void ApplyColor(CubeMovement cube, Color color)
     {
         Renderer r = cube.GetComponent<Renderer>();
@@ -250,7 +298,9 @@ public class CubeSpawnManager : MonoBehaviour
         r.SetPropertyBlock(_mpb);
     }
 
-    // Start ##########################################
+    // =========================================================
+    // Start
+    // =========================================================
     void Start()
     {
         _gameManager = GameManager._GM;
@@ -270,13 +320,24 @@ public class CubeSpawnManager : MonoBehaviour
         _targetY = _cameraTarget.position.y - 1;
         _BGY = _BG.position.y;
 
+        // 타이틀 씬에서 넘어온 색 적용
+        _cubeGen.SetCount(ColorState.cubeCount);
+        _bgGen.SetCount(ColorState.bgCount);
+
+        Renderer baseRenderer = _previousCube.GetComponent<Renderer>();
+
+        _cubeColorManager.ApplyColor(baseRenderer, ColorState.cubeColor);
+        _bgColorManager.ApplyColor(ColorState.bgColor);
+
         SpawnCube();
     }
 
-    // Update #########################################
+    // =========================================================
+    // Update
+    // =========================================================
     void Update()
     {
-        if (_gameManager.IsGameOver) return;     
+        if (_gameManager.IsGameOver) return;
 
         Vector3 pos = _cameraTarget.position;
         pos.y = Mathf.Lerp(pos.y, _targetY, Time.deltaTime * 5f);
@@ -289,14 +350,14 @@ public class CubeSpawnManager : MonoBehaviour
         if (Mouse.current.leftButton.wasPressedThisFrame)
         {
             if (_inputLocked) return;
-                _inputLocked = true;
+            _inputLocked = true;
 
             if (_currentCube != null)
             {
                 _currentCube.StopCube();
                 CheckStack();
 
-                if(_lastCube != null)
+                if (_lastCube != null)
                 {
                     _inputLocked = false;
                     return;

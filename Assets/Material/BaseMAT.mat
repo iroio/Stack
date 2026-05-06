@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &-3877886214847401314
+--- !u!114 &-8439514061676155580
 MonoBehaviour:
   m_ObjectHideFlags: 11
   m_CorrespondingSourceObject: {fileID: 0}
@@ -20,7 +20,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: BaseCubeMAT
+  m_Name: BaseMAT
   m_Shader: {fileID: -6465566751694194690, guid: d1e57c4549805ac4ea940c1c4fcab397, type: 3}
   m_Parent: {fileID: -876546973899608171, guid: d1e57c4549805ac4ea940c1c4fcab397, type: 3}
   m_ModifiedSerializedProperties: 0

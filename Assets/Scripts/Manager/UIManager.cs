@@ -23,6 +23,8 @@ public class UIManager : MonoBehaviour
 
         GameManager._GM.ResetGame();
 
+        ColorState.Reset();
+
         ScenesManager.Instance.LoadScene("Game");
     }
 
