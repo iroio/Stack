@@ -42,7 +42,7 @@ public class ScenesManager : MonoBehaviour
 
             if (cube != null)
             {
-                //cube.CubeUp();
+                
             }
             else
             {

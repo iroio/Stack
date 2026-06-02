@@ -33,7 +33,7 @@ public class UIManager : MonoBehaviour
         _scoreTmp.text = score.ToString();
     }
 
-    public void GameOverResult(int score, int highScore)
+    public void GameOverResult(int highScore)
     {
         _canvas.gameObject.SetActive(true);
         _resultTmp.text = highScore.ToString();

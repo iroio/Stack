@@ -44,7 +44,7 @@ public class GameManager : MonoBehaviour
 
         // Result 텍스트 출력
         if(UIManager._UM != null)
-            UIManager._UM.GameOverResult(_score, _highScore);
+            UIManager._UM.GameOverResult(_highScore);
     }
 
     public void ResetGame()

@@ -20,6 +20,11 @@ public class CubeSpawnManager : MonoBehaviour
     [SerializeField] Renderer _gradientCubeRenderer;
 
     // =========================================================
+    // 파티클 관련 연결
+    // =========================================================
+    [SerializeField] ParticleSystem _particleSystem;
+
+    // =========================================================
     // 설정
     // =========================================================
     [SerializeField] Transform _cameraTarget;   // 카메라가 따라갈 타켓
@@ -65,7 +70,6 @@ public class CubeSpawnManager : MonoBehaviour
     // 풀링
     // =========================================================
     GameObjectPool<CubeMovement> _cubePools;
-
 
     // =========================================================
     public float _CurrentSpeed => _moveSpeed;
@@ -219,7 +223,7 @@ public class CubeSpawnManager : MonoBehaviour
             _gameManager.AddScore(1);
         }
 
-        // 퍼펙트 판정 체크
+        // 퍼펙트 허용 범위 계산
         float perfectOffset = baseSize * _perfectThresholdRatio;
 
         if (_absOffset <= perfectOffset)
@@ -236,6 +240,11 @@ public class CubeSpawnManager : MonoBehaviour
 
             // 퍼펙트시 속도 감소
             _moveSpeed -= _speedIncrease;
+
+            //퍼펙트시 이펙트 실행
+            _particleSystem.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            _particleSystem.transform.position = _currentCube.transform.position;
+            _particleSystem.Play();
         }
         else
         {
@@ -245,6 +254,7 @@ public class CubeSpawnManager : MonoBehaviour
 
         _moveSpeed = Mathf.Clamp(_moveSpeed, _minSpeed, _maxSpeed);
 
+        // 벗어난 범위만큼 큐브 조정
         _overlapSize = Mathf.Max(0, baseSize - _absOffset);
 
         //  위치 보정
@@ -284,7 +294,6 @@ public class CubeSpawnManager : MonoBehaviour
         cube.gameObject.SetActive(false);
         _cubePools.Set(cube);
     }
-
 
     // =========================================================
     // 색상 적용
